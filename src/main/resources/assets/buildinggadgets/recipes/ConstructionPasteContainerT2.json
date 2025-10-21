@@ -1,0 +1,25 @@
+{
+  "result": {
+    "item": "buildinggadgets:constructionpastecontainert2"
+  },
+  "pattern": [
+    "cgc",
+    "ggg",
+    "cgc"
+  ],
+  "type": "buildinggadgets:constructionpaste",
+  "key": {
+    "g": {
+      "type": "forge:ore_dict",
+      "ore": "ingotGold"
+    },
+    "c": {
+      "item": "buildinggadgets:constructionpastecontainer"
+    }
+  },
+  "conditions": [
+    {
+      "type": "buildinggadgets:enablePaste"
+    }
+  ]
+}

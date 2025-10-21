@@ -78,7 +78,7 @@ minecraft {
     useDependencyAccessTransformers.set(propertyBool('use_dependency_at_files'))
 
     username.set(propertyString('minecraft_username'))
-    
+
     // Add any additional tweaker classes here
     extraTweakClasses.addAll(propertyStringList('extra_tweak_classes'))
 
@@ -106,6 +106,42 @@ repositories {
     maven {
         name 'CleanroomMC Maven'
         url 'https://maven.cleanroommc.com'
+    }
+    maven {
+        name "tterrag's Maven" // CTM
+        url "https://maven.tterrag.com/"
+    }
+    maven {
+        name "Raoulvdberge Repo" // RS
+        url "https://repo.refinedmods.com/"
+    }
+    maven {
+        name = "DVS1 Maven" // AE2
+        url = "https://dvs1.progwml6.com/files/maven/"
+    }
+    maven {
+        name = "CurseForge" // SSN, Mekanism, Cyclic
+        url = "https://minecraft.curseforge.com/api/maven/"
+    }
+    maven {
+        name = "Covers" // CoFH
+        url = "https://maven.covers1624.net/"
+    }
+    maven {
+        name = "Mod Maven" // AA
+        url = "https://modmaven.k-4u.nl/"
+    }
+    maven {
+        name "Jared's Repo" // EI
+        url "https://maven.blamejared.com/"
+    }
+    maven {
+        name "IC2" // IC2, Forestry
+        url "https://maven.ic2.player.to/"
+    }
+    maven {
+        name = "CoFH Maven"
+        url = "https://maven.covers1624.net"
     }
 }
 
@@ -144,6 +180,38 @@ dependencies {
         testImplementation 'org.junit.jupiter:junit-jupiter:5.7.1'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     }
+    implementation rfg.deobf('curse.maven:top-245211:2667280') // TOP 1.4.28
+    implementation rfg.deobf("curse.maven:had-enough-items-557549:7057606")
+    implementation rfg.deobf("curse.maven:code-chicken-lib-1-8-242818:2779848")
+    implementation rfg.deobf(files("libs/gregtech-MeowmelMuku-1.12.2-2.9.0-190.jar"))
+
+    api("com.cleanroommc:modularui:2.5.0-rc4") { transitive = false }
+
+    implementation rfg.deobf("curse.maven:redstone-flux-270789:2920436")
+
+    api rfg.deobf("curse.maven:ctm-267602:2915363") // CTM 1.0.2.31
+
+    implementation rfg.deobf("curse.maven:ae2-fluid-crafting-rework-623955:5751930") // AE2FC 2.6.6
+    implementation rfg.deobf("curse.maven:ae2-extended-life-570458:6302098") // AE2FC 2.6.6
+
+    implementation rfg.deobf("curse.maven:refined-storage-243076:2940914")
+
+    implementation rfg.deobf("curse.maven:forestry-59751:2684780") // Forestry 5.8.2.387
+
+    implementation rfg.deobf("curse.maven:simple-storage-network-268495:5755625")
+
+    implementation rfg.deobf("curse.maven:cofh-core-69162:2920433")
+
+    implementation rfg.deobf("curse.maven:actually-additions-228404:3117927")
+
+    implementation rfg.deobf("curse.maven:immersive-engineering-231951:2974106")
+
+    implementation rfg.deobf("curse.maven:industrial-craft-242638:3838713")
+
+    implementation rfg.deobf("curse.maven:mekanism-268560:2835175")
+
+    implementation rfg.deobf("curse.maven:cyclic-239286:4075832")
+
 }
 
 apply from: 'gradle/scripts/dependencies.gradle'
@@ -194,7 +262,7 @@ processResources {
                 'mixin_package': propertyString('mixin_package')
         )
     }
-    
+
     if (propertyBool('use_access_transformer')) {
         rename '(.+_at.cfg)', 'META-INF/$1'
     }

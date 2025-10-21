@@ -1,0 +1,10 @@
+{
+  "parent": "buildinggadgets:block/orientable",
+  "textures": {
+    "particle": "buildinggadgets:blocks/templatemanager",
+    "front": "buildinggadgets:blocks/templatemanagerfront",
+    "top": "buildinggadgets:blocks/templatemanagertop",
+    "bottom": "buildinggadgets:blocks/templatemanagerbottom",
+    "side": "buildinggadgets:blocks/templatemanager"
+  }
+}
