@@ -45,17 +45,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * 复制粘贴工具类
+ * 允许玩家复制建筑区域并将其粘贴到其他位置
+ */
 public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
 
+    /**
+     * 工具模式枚举
+     */
     public enum ToolMode {
-        Copy, Paste;
+        Copy, // 复制模式
+        Paste; // 粘贴模式
+
         private static ToolMode[] vals = values();
 
+        /**
+         * 切换到下一个模式
+         */
         public ToolMode next() {
             return vals[(this.ordinal() + 1) % vals.length];
         }
     }
 
+    /**
+     * 构造函数
+     */
     public GadgetCopyPaste() {
         super("copypastetool");
         setMaxDamage(SyncedConfig.durabilityCopyPaste);
@@ -63,6 +78,7 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
 
     @Override
     public int getMaxDamage(ItemStack stack) {
+        // 如果使用FE能量系统，耐久度为0，否则使用配置的耐久度
         return SyncedConfig.poweredByFE ? 0 : SyncedConfig.durabilityCopyPaste;
     }
 
@@ -76,26 +92,44 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         return SyncedConfig.damageCostCopyPaste;
     }
 
+    /**
+     * 设置锚点位置（粘贴的起始点）
+     */
     private static void setAnchor(ItemStack stack, BlockPos anchorPos) {
         GadgetUtils.writePOSToNBT(stack, anchorPos, "anchor");
     }
 
+    /**
+     * 设置X轴偏移量
+     */
     public static void setX(ItemStack stack, int horz) {
         GadgetUtils.writeIntToNBT(stack, horz, "X");
     }
 
+    /**
+     * 设置Y轴偏移量
+     */
     public static void setY(ItemStack stack, int vert) {
         GadgetUtils.writeIntToNBT(stack, vert, "Y");
     }
 
+    /**
+     * 设置Z轴偏移量
+     */
     public static void setZ(ItemStack stack, int depth) {
         GadgetUtils.writeIntToNBT(stack, depth, "Z");
     }
 
+    /**
+     * 获取X轴偏移量
+     */
     public static int getX(ItemStack stack) {
         return GadgetUtils.getIntFromNBT(stack, "X");
     }
 
+    /**
+     * 获取Y轴偏移量
+     */
     public static int getY(ItemStack stack) {
         NBTTagCompound tagCompound = stack.getTagCompound();
         if (tagCompound == null) return 1;
@@ -104,10 +138,16 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         return tagInt;
     }
 
+    /**
+     * 获取Z轴偏移量
+     */
     public static int getZ(ItemStack stack) {
         return GadgetUtils.getIntFromNBT(stack, "Z");
     }
 
+    /**
+     * 获取锚点位置
+     */
     public static BlockPos getAnchor(ItemStack stack) {
         return GadgetUtils.getPOSFromNBT(stack, "anchor");
     }
@@ -120,6 +160,7 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
     @Override
     @Nullable
     public String getUUID(ItemStack stack) {
+        // 为每个复制操作生成唯一标识符
         NBTTagCompound tagCompound = stack.getTagCompound();
         if (tagCompound == null) {
             return null;
@@ -137,72 +178,111 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         return uuid;
     }
 
-    public static String getOwner(ItemStack stack) {//TODO unused
+    /**
+     * 获取工具所有者（未使用）
+     */
+    public static String getOwner(ItemStack stack) {
         return GadgetUtils.getStackTag(stack).getString("owner");
     }
 
-    public static void setOwner(ItemStack stack, String owner) {//TODO unused
+    /**
+     * 设置工具所有者（未使用）
+     */
+    public static void setOwner(ItemStack stack, String owner) {
         NBTTagCompound tagCompound = GadgetUtils.getStackTag(stack);
         tagCompound.setString("owner", owner);
         stack.setTagCompound(tagCompound);
     }
 
+    /**
+     * 设置最后一次构建的位置和维度
+     */
     private static void setLastBuild(ItemStack stack, BlockPos anchorPos, Integer dim) {
         GadgetUtils.writePOSToNBT(stack, anchorPos, "lastBuild", dim);
     }
 
+    /**
+     * 获取最后一次构建的位置
+     */
     private static BlockPos getLastBuild(ItemStack stack) {
         return GadgetUtils.getPOSFromNBT(stack, "lastBuild");
     }
 
+    /**
+     * 获取最后一次构建的维度
+     */
     private static Integer getLastBuildDim(ItemStack stack) {
         return GadgetUtils.getDIMFromNBT(stack, "lastBuild");
     }
 
+    /**
+     * 从NBT数据获取方块映射列表
+     */
     public static List<BlockMap> getBlockMapList(@Nullable NBTTagCompound tagCompound) {
         return getBlockMapList(tagCompound, GadgetUtils.getPOSFromNBT(tagCompound, "startPos"));
     }
 
+    /**
+     * 从NBT数据获取方块映射列表（指定起始位置）
+     */
     private static List<BlockMap> getBlockMapList(@Nullable NBTTagCompound tagCompound, BlockPos startBlock) {
         List<BlockMap> blockMap = new ArrayList<BlockMap>();
         if (tagCompound == null) {
             tagCompound = new NBTTagCompound();
         }
+
+        // 读取方块状态映射
         NBTTagList MapIntStateTag = (NBTTagList) tagCompound.getTag("mapIntState");
         if (MapIntStateTag == null) {
             MapIntStateTag = new NBTTagList();
         }
         BlockMapIntState MapIntState = new BlockMapIntState();
         MapIntState.getIntStateMapFromNBT(MapIntStateTag);
+
+        // 读取位置和状态数组
         int[] posIntArray = tagCompound.getIntArray("posIntArray");
         int[] stateIntArray = tagCompound.getIntArray("stateIntArray");
+
+        // 重建方块映射
         for (int i = 0; i < posIntArray.length; i++) {
             int p = posIntArray[i];
             BlockPos pos = GadgetUtils.relIntToPos(startBlock, p);
             short IntState = (short) stateIntArray[i];
-            blockMap.add(new BlockMap(pos, MapIntState.getStateFromSlot(IntState), (byte) ((p & 0xff0000) >> 16), (byte) ((p & 0x00ff00) >> 8), (byte) (p & 0x0000ff)));
+            blockMap.add(new BlockMap(pos, MapIntState.getStateFromSlot(IntState),
+                    (byte) ((p & 0xff0000) >> 16), (byte) ((p & 0x00ff00) >> 8), (byte) (p & 0x0000ff)));
         }
         return blockMap;
     }
 
+    /**
+     * 获取方块状态和物品堆栈的映射
+     */
     public static BlockMapIntState getBlockMapIntState(@Nullable NBTTagCompound tagCompound) {
         if (tagCompound == null) {
             tagCompound = new NBTTagCompound();
         }
+
+        // 读取方块状态映射
         NBTTagList MapIntStateTag = (NBTTagList) tagCompound.getTag("mapIntState");
         if (MapIntStateTag == null) {
             MapIntStateTag = new NBTTagList();
         }
+
+        // 读取物品堆栈映射
         NBTTagList MapIntStackTag = (NBTTagList) tagCompound.getTag("mapIntStack");
         if (MapIntStackTag == null) {
             MapIntStackTag = new NBTTagList();
         }
+
         BlockMapIntState MapIntState = new BlockMapIntState();
         MapIntState.getIntStateMapFromNBT(MapIntStateTag);
         MapIntState.getIntStackMapFromNBT(MapIntStackTag);
         return MapIntState;
     }
 
+    /**
+     * 设置工具模式
+     */
     private static void setToolMode(ItemStack stack, ToolMode mode) {
         NBTTagCompound tagCompound = stack.getTagCompound();
         if (tagCompound == null) {
@@ -212,6 +292,9 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         stack.setTagCompound(tagCompound);
     }
 
+    /**
+     * 获取工具模式
+     */
     public static ToolMode getToolMode(ItemStack stack) {
         NBTTagCompound tagCompound = stack.getTagCompound();
         ToolMode mode = ToolMode.Copy;
@@ -230,14 +313,17 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
     @Override
     public void addInformation(ItemStack stack, @Nullable World world, List<String> list, ITooltipFlag b) {
         super.addInformation(stack, world, list, b);
+        // 添加模式信息
         list.add(TextFormatting.AQUA + I18n.format("tooltip.gadget.mode") + ": " + getToolMode(stack));
         addInformationRayTraceFluid(list, stack);
         addEnergyInformation(list, stack);
         EventTooltip.addTemplatePadding(stack, list);
     }
 
+    /**
+     * 设置工具模式（通过径向菜单）
+     */
     public void setMode(ItemStack heldItem, int modeInt) {
-        //Called when we specify a mode with the radial menu
         ToolMode mode = ToolMode.values()[modeInt];
         setToolMode(heldItem, mode);
     }
@@ -247,15 +333,15 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         ItemStack stack = player.getHeldItem(hand);
         player.setActiveHand(hand);
         BlockPos pos = VectorTools.getPosLookingAt(player, stack);
+
         if (!world.isRemote) {
+            // 服务器端逻辑
             if (pos != null && player.isSneaking() && GadgetUtils.setRemoteInventory(stack, player, world, pos, false) == EnumActionResult.SUCCESS)
                 return new ActionResult<ItemStack>(EnumActionResult.SUCCESS, stack);
 
             if (getToolMode(stack) == ToolMode.Copy) {
+                // 复制模式逻辑
                 if (pos == null) {
-                    //setStartPos(stack, null);
-                    //setEndPos(stack, null);
-                    //player.sendStatusMessage(new TextComponentString(TextFormatting.AQUA + new TextComponentTranslation("message.gadget.areareset").getUnformattedComponentText()), true);
                     return new ActionResult<ItemStack>(EnumActionResult.SUCCESS, stack);
                 }
                 if (player.isSneaking()) {
@@ -270,6 +356,7 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
                         setStartPos(stack, pos);
                 }
             } else if (getToolMode(stack) == ToolMode.Paste) {
+                // 粘贴模式逻辑
                 if (!player.isSneaking()) {
                     if (getAnchor(stack) == null) {
                         if (pos == null) return new ActionResult<ItemStack>(EnumActionResult.FAIL, stack);
@@ -281,6 +368,7 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
                 }
             }
         } else {
+            // 客户端逻辑
             if (pos != null && player.isSneaking()) {
                 if (GadgetUtils.getRemoteInventory(pos, world, player, NetworkIO.Operation.EXTRACT) != null)
                     return new ActionResult<ItemStack>(EnumActionResult.SUCCESS, stack);
@@ -297,30 +385,39 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         return new ActionResult<ItemStack>(EnumActionResult.SUCCESS, stack);
     }
 
+    /**
+     * 旋转或镜像方块
+     */
     public static void rotateOrMirrorBlocks(ItemStack stack, EntityPlayer player, PacketRotateMirror.Operation operation) {
         if (!(getToolMode(stack) == ToolMode.Paste)) return;
         if (player.world.isRemote) {
             return;
         }
+
         GadgetCopyPaste tool = ModItems.gadgetCopyPaste;
         List<BlockMap> blockMapList = new ArrayList<BlockMap>();
         WorldSave worldSave = WorldSave.getWorldSave(player.world);
         NBTTagCompound tagCompound = worldSave.getCompoundFromUUID(tool.getUUID(stack));
         BlockPos startPos = tool.getStartPos(stack);
         if (startPos == null) return;
+
         blockMapList = getBlockMapList(tagCompound);
         List<Integer> posIntArrayList = new ArrayList<Integer>();
         List<Integer> stateIntArrayList = new ArrayList<Integer>();
         BlockMapIntState blockMapIntState = new BlockMapIntState();
 
+        // 对每个方块进行旋转或镜像变换
         for (BlockMap blockMap : blockMapList) {
             BlockPos tempPos = blockMap.pos;
 
             int px = (tempPos.getX() - startPos.getX());
             int pz = (tempPos.getZ() - startPos.getZ());
             int nx, nz;
+
+            // 应用旋转或镜像变换
             IBlockState alteredState = GadgetUtils.rotateOrMirrorBlock(player, operation, blockMap.state);
             if (operation == PacketRotateMirror.Operation.MIRROR) {
+                // 镜像变换
                 if (player.getHorizontalFacing().getAxis() == Axis.X) {
                     nx = px;
                     nz = -pz;
@@ -329,9 +426,11 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
                     nz = pz;
                 }
             } else {
+                // 旋转变换
                 nx = -pz;
                 nz = px;
             }
+
             BlockPos newPos = new BlockPos(startPos.getX() + nx, tempPos.getY(), startPos.getZ() + nz);
             posIntArrayList.add(GadgetUtils.relPosToInt(startPos, newPos));
             blockMapIntState.addToMap(alteredState);
@@ -339,6 +438,8 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
             UniqueItem uniqueItem = BlockMapIntState.blockStateToUniqueItem(alteredState, player, tempPos);
             blockMapIntState.addToStackMap(uniqueItem, alteredState);
         }
+
+        // 更新NBT数据
         int[] posIntArray = posIntArrayList.stream().mapToInt(i -> i).toArray();
         int[] stateIntArray = stateIntArrayList.stream().mapToInt(i -> i).toArray();
         tagCompound.setTag("mapIntState", blockMapIntState.putIntStateMapIntoNBT());
@@ -347,6 +448,8 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         tagCompound.setIntArray("stateIntArray", stateIntArray);
         tool.incrementCopyCounter(stack);
         tagCompound.setInteger("copycounter", tool.getCopyCounter(stack));
+
+        // 保存并同步到客户端
         worldSave.addToMap(tool.getUUID(stack), tagCompound);
         worldSave.markForSaving();
         PacketHandler.INSTANCE.sendTo(new PacketBlockMap(tagCompound), (EntityPlayerMP) player);
@@ -354,6 +457,9 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
                 + new TextComponentTranslation("message.gadget." + (player.isSneaking() ? "mirrored" : "rotated")).getUnformattedComponentText()), true);
     }
 
+    /**
+     * 复制方块区域
+     */
     public static void copyBlocks(ItemStack stack, EntityPlayer player, World world, BlockPos startPos, BlockPos endPos) {
         if (startPos != null && endPos != null) {
             GadgetCopyPaste tool = ModItems.gadgetCopyPaste;
@@ -364,9 +470,14 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         }
     }
 
+    /**
+     * 查找并复制区域内的方块
+     */
     private static boolean findBlocks(World world, BlockPos start, BlockPos end, ItemStack stack, EntityPlayer player, GadgetCopyPaste tool) {
         setLastBuild(stack, null, 0);
-        int foundTE = 0;
+        int foundTE = 0; // 找到的TileEntity数量
+
+        // 计算区域边界
         int startX = start.getX();
         int startY = start.getY();
         int startZ = start.getZ();
@@ -375,17 +486,20 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         int endY = end.getY();
         int endZ = end.getZ();
 
+        // 检查区域是否过大
         if (Math.abs(startX - endX) >= 125 || Math.abs(startY - endY) >= 125 || Math.abs(startZ - endZ) >= 125) {
             player.sendStatusMessage(new TextComponentString(TextFormatting.RED + new TextComponentTranslation("message.gadget.toobigarea").getUnformattedComponentText()), true);
             return false;
         }
 
+        // 确定区域的起始和结束坐标
         int iStartX = startX < endX ? startX : endX;
         int iStartY = startY < endY ? startY : endY;
         int iStartZ = startZ < endZ ? startZ : endZ;
         int iEndX = startX < endX ? endX : startX;
         int iEndY = startY < endY ? endY : startY;
         int iEndZ = startZ < endZ ? endZ : startZ;
+
         WorldSave worldSave = WorldSave.getWorldSave(world);
         NBTTagCompound tagCompound = new NBTTagCompound();
         List<Integer> posIntArrayList = new ArrayList<Integer>();
@@ -395,31 +509,46 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
 
         int blockCount = 0;
 
+        // 遍历区域内的所有方块
         for (int x = iStartX; x <= iEndX; x++) {
             for (int y = iStartY; y <= iEndY; y++) {
                 for (int z = iStartZ; z <= iEndZ; z++) {
                     BlockPos tempPos = new BlockPos(x, y, z);
                     IBlockState tempState = world.getBlockState(tempPos);
-                    if (!(tempState.getBlock() instanceof EffectBlock) && tempState != Blocks.AIR.getDefaultState() && (world.getTileEntity(tempPos) == null || world.getTileEntity(tempPos) instanceof ConstructionBlockTileEntity) && !tempState.getMaterial().isLiquid() && !SyncedConfig.blockBlacklist.contains(tempState.getBlock())) {
+
+                    // 检查方块是否可复制
+                    if (!(tempState.getBlock() instanceof EffectBlock) &&
+                            tempState != Blocks.AIR.getDefaultState() &&
+                            (world.getTileEntity(tempPos) == null || world.getTileEntity(tempPos) instanceof ConstructionBlockTileEntity) &&
+                            !tempState.getMaterial().isLiquid() &&
+                            !SyncedConfig.blockBlacklist.contains(tempState.getBlock())) {
+
                         TileEntity te = world.getTileEntity(tempPos);
                         IBlockState assignState = InventoryManipulation.getSpecificStates(tempState, world, player, tempPos, stack);
                         IBlockState actualState = assignState.getActualState(world, tempPos);
+
                         if (te instanceof ConstructionBlockTileEntity) {
                             actualState = ((ConstructionBlockTileEntity) te).getActualBlockState();
                         }
+
                         if (actualState != null) {
                             UniqueItem uniqueItem = BlockMapIntState.blockStateToUniqueItem(actualState, player, tempPos);
                             if (uniqueItem.item != Items.AIR) {
+                                // 记录方块位置和状态
                                 posIntArrayList.add(GadgetUtils.relPosToInt(start, tempPos));
                                 blockMapIntState.addToMap(actualState);
                                 stateIntArrayList.add((int) blockMapIntState.findSlot(actualState));
 
                                 blockMapIntState.addToStackMap(uniqueItem, actualState);
                                 blockCount++;
+
+                                // 检查方块数量限制
                                 if (blockCount > 32768) {
                                     player.sendStatusMessage(new TextComponentString(TextFormatting.RED + new TextComponentTranslation("message.gadget.toomanyblocks").getUnformattedComponentText()), true);
                                     return false;
                                 }
+
+                                // 计算需要的物品数量
                                 NonNullList<ItemStack> drops = NonNullList.create();
                                 if (actualState != null)
                                     actualState.getBlock().getDrops(drops, world, new BlockPos(0, 0, 0), actualState, 0);
@@ -437,11 +566,14 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
                             }
                         }
                     } else if ((world.getTileEntity(tempPos) != null) && !(world.getTileEntity(tempPos) instanceof ConstructionBlockTileEntity)) {
+                        // 统计不支持复制的TileEntity数量
                         foundTE++;
                     }
                 }
             }
         }
+
+        // 保存数据到NBT
         tool.setItemCountMap(stack, itemCountMap);
         tagCompound.setTag("mapIntState", blockMapIntState.putIntStateMapIntoNBT());
         tagCompound.setTag("mapIntStack", blockMapIntState.putIntStackMapIntoNBT());
@@ -458,10 +590,12 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         tool.incrementCopyCounter(stack);
         tagCompound.setInteger("copycounter", tool.getCopyCounter(stack));
 
+        // 保存到世界数据并同步到客户端
         worldSave.addToMap(tool.getUUID(stack), tagCompound);
         worldSave.markForSaving();
         PacketHandler.INSTANCE.sendTo(new PacketBlockMap(tagCompound), (EntityPlayerMP) player);
 
+        // 发送操作结果消息
         if (foundTE > 0) {
             player.sendStatusMessage(new TextComponentString(TextFormatting.YELLOW + new TextComponentTranslation("message.gadget.TEinCopy").getUnformattedComponentText() + ": " + foundTE), true);
         } else {
@@ -470,17 +604,20 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         return true;
     }
 
+    /**
+     * 构建并放置方块映射
+     */
     private void buildBlockMap(World world, BlockPos startPos, ItemStack stack, EntityPlayer player) {
-//        long time = System.nanoTime();
-
         BlockPos anchorPos = getAnchor(stack);
         BlockPos pos = anchorPos == null ? startPos : anchorPos;
         NBTTagCompound tagCompound = WorldSave.getWorldSave(world).getCompoundFromUUID(getUUID(stack));
 
+        // 应用偏移量
         pos = pos.up(GadgetCopyPaste.getY(stack));
         pos = pos.east(GadgetCopyPaste.getX(stack));
         pos = pos.south(GadgetCopyPaste.getZ(stack));
 
+        // 获取方块映射列表并放置方块
         List<BlockMap> blockMapList = getBlockMapList(tagCompound, pos);
         setLastBuild(stack, pos, player.dimension);
 
@@ -489,14 +626,18 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
 
         GadgetUtils.clearCachedRemoteInventory();
         setAnchor(stack, null);
-        //System.out.printf("Built %d Blocks in %.2f ms%n", blockMapList.size(), (System.nanoTime() - time) * 1e-6);
     }
 
+    /**
+     * 放置单个方块
+     */
     private void placeBlock(World world, BlockPos pos, EntityPlayer player, IBlockState state, Map<IBlockState, UniqueItem> IntStackMap) {
+        // 检查位置是否有效
         if( world.isOutsideBuildHeight(pos) )
             return;
 
         IBlockState testState = world.getBlockState(pos);
+        // 检查是否可以覆盖方块
         if ((SyncedConfig.canOverwriteBlocks && !testState.getBlock().isReplaceable(world, pos)) ||
                 (!SyncedConfig.canOverwriteBlocks && testState.getBlock().isAir(testState, world, pos)))
             return;
@@ -511,9 +652,12 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         if (ModItems.gadgetCopyPaste.getStartPos(heldItem) == null || ModItems.gadgetCopyPaste.getEndPos(heldItem) == null)
             return;
 
+        // 获取对应的物品
         UniqueItem uniqueItem = IntStackMap.get(state);
-        if (uniqueItem == null) return; //This shouldn't happen I hope!
+        if (uniqueItem == null) return;
         ItemStack itemStack = new ItemStack(uniqueItem.item, 1, uniqueItem.meta);
+
+        // 计算需要的物品数量
         NonNullList<ItemStack> drops = NonNullList.create();
         state.getBlock().getDrops(drops, world, pos, state, 0);
         int neededItems = 0;
@@ -525,14 +669,17 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         if (neededItems == 0) {
             neededItems = 1;
         }
+
         if (!world.isBlockModifiable(player, pos)) {
             return;
         }
 
+        // 创建方块快照并检查事件
         BlockSnapshot blockSnapshot = BlockSnapshot.getBlockSnapshot(world, pos);
         if( !GadgetGeneric.EmitEvent.placeBlock(player, blockSnapshot, EnumFacing.UP, EnumHand.MAIN_HAND) )
             return;
 
+        // 检查物品是否足够，如果不够则使用建筑浆糊
         ItemStack constructionPaste = new ItemStack(ModItems.constructionPaste);
         boolean useConstructionPaste = false;
         if (InventoryManipulation.countItem(itemStack, player, world) < neededItems) {
@@ -546,22 +693,28 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         if (!this.canUse(heldItem, player))
             return;
 
+        // 使用物品
         boolean useItemSuccess;
         if (useConstructionPaste) {
             useItemSuccess = InventoryManipulation.usePaste(player, 1);
         } else {
             useItemSuccess = InventoryManipulation.useItem(itemStack, player, neededItems, world);
         }
+
+        // 如果物品使用成功，生成方块建造实体
         if (useItemSuccess) {
             this.applyDamage(heldItem, player);
             world.spawnEntity(new BlockBuildEntity(world, pos, player, state, 1, state, useConstructionPaste));
         }
-
     }
 
+    /**
+     * 设置或移除锚点
+     */
     public static void anchorBlocks(EntityPlayer player, ItemStack stack) {
         BlockPos currentAnchor = getAnchor(stack);
         if (currentAnchor == null) {
+            // 设置新锚点
             RayTraceResult lookingAt = VectorTools.getLookingAt(player, stack);
             if (lookingAt == null) {
                 return;
@@ -570,34 +723,44 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
             setAnchor(stack, currentAnchor);
             player.sendStatusMessage(new TextComponentString(TextFormatting.AQUA + new TextComponentTranslation("message.gadget.anchorrender").getUnformattedComponentText()), true);
         } else {
+            // 移除锚点
             setAnchor(stack, null);
             player.sendStatusMessage(new TextComponentString(TextFormatting.AQUA + new TextComponentTranslation("message.gadget.anchorremove").getUnformattedComponentText()), true);
         }
     }
 
+    /**
+     * 撤销最后一次构建
+     */
     public void undoBuild(EntityPlayer player, ItemStack heldItem) {
-//        long time = System.nanoTime();
         NBTTagCompound tagCompound = WorldSave.getWorldSave(player.world).getCompoundFromUUID(ModItems.gadgetCopyPaste.getUUID(heldItem));
         World world = player.world;
         if (world.isRemote) {
             return;
         }
+
         BlockPos startPos = getLastBuild(heldItem);
         if (startPos == null)
             return;
 
         Integer dimension = getLastBuildDim(heldItem);
-        ItemStack silkTool = heldItem.copy(); //Setup a Silk Touch version of the tool so we can return stone instead of cobblestone, etc.
+        // 创建带精准采集的工具以获取正确的掉落物
+        ItemStack silkTool = heldItem.copy();
         silkTool.addEnchantment(Enchantments.SILK_TOUCH, 1);
+
         List<BlockMap> blockMapList = getBlockMapList(tagCompound, startPos);
         boolean success = true;
+
+        // 撤销每个方块的放置
         for (BlockMap blockMap : blockMapList) {
             double distance = blockMap.pos.getDistance(player.getPosition().getX(), player.getPosition().getY(), player.getPosition().getZ());
             boolean sameDim = (player.dimension == dimension);
             IBlockState currentBlock = world.getBlockState(blockMap.pos);
 
             boolean cancelled = !GadgetGeneric.EmitEvent.breakBlock(world, blockMap.pos, currentBlock, player);
-            if (distance < 256 && !cancelled && sameDim) { //Don't allow us to undo a block while its still being placed or too far away
+
+            // 检查距离和维度，然后拆除方块
+            if (distance < 256 && !cancelled && sameDim) {
                 if (currentBlock.getBlock() == blockMap.state.getBlock() || currentBlock.getBlock() instanceof ConstructionBlock) {
                     if (currentBlock.getBlockHardness(world, blockMap.pos) >= 0) {
                         if( !player.capabilities.isCreativeMode )
@@ -609,11 +772,14 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
                 player.sendStatusMessage(new TextComponentString(TextFormatting.RED + new TextComponentTranslation("message.gadget.undofailed").getUnformattedComponentText()), true);
                 success = false;
             }
-            //System.out.printf("Undid %d Blocks in %.2f ms%n", blockMapList.size(), (System.nanoTime() - time) * 1e-6);
         }
+
         if (success) setLastBuild(heldItem, null, 0);
     }
 
+    /**
+     * 获取玩家手中的复制粘贴工具
+     */
     public static ItemStack getGadget(EntityPlayer player) {
         ItemStack stack = GadgetGeneric.getGadget(player);
         if (!(stack.getItem() instanceof GadgetCopyPaste))
@@ -621,5 +787,4 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
 
         return stack;
     }
-
 }
