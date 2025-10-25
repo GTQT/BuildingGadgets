@@ -10,6 +10,8 @@ import com.direwolf20.buildinggadgets.common.config.SyncedConfig;
 import com.direwolf20.buildinggadgets.common.entities.BlockBuildEntity;
 import com.direwolf20.buildinggadgets.common.items.ITemplate;
 import com.direwolf20.buildinggadgets.common.items.ModItems;
+import com.direwolf20.buildinggadgets.common.processTileEntity.utils.BlockAnalysisResult;
+import com.direwolf20.buildinggadgets.common.processTileEntity.TileEntityCopyHandler;
 import com.direwolf20.buildinggadgets.common.network.PacketBlockMap;
 import com.direwolf20.buildinggadgets.common.network.PacketHandler;
 import com.direwolf20.buildinggadgets.common.network.PacketRotateMirror;
@@ -476,6 +478,7 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
     private static boolean findBlocks(World world, BlockPos start, BlockPos end, ItemStack stack, EntityPlayer player, GadgetCopyPaste tool) {
         setLastBuild(stack, null, 0);
         int foundTE = 0; // 找到的TileEntity数量
+        int supportedTE = 0; // 支持复制的TE数量
 
         // 计算区域边界
         int startX = start.getX();
@@ -506,6 +509,9 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         List<Integer> stateIntArrayList = new ArrayList<Integer>();
         BlockMapIntState blockMapIntState = new BlockMapIntState();
         Multiset<UniqueItem> itemCountMap = HashMultiset.create();
+
+        //特殊TE/MTE数据存储
+        NBTTagList teDataList = new NBTTagList();
 
         int blockCount = 0;
 
@@ -568,6 +574,25 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
                     } else if ((world.getTileEntity(tempPos) != null) && !(world.getTileEntity(tempPos) instanceof ConstructionBlockTileEntity)) {
                         // 统计不支持复制的TileEntity数量
                         foundTE++;
+                        //发送数据
+                        BlockAnalysisResult analysis = TileEntityCopyHandler.copyTEData(
+                                world, tempPos, player);
+
+                        if(analysis.isSupported()){
+                            supportedTE++;
+
+                            // 将支持的TE数据保存到NBT
+                            NBTTagCompound teTag = new NBTTagCompound();
+                            teTag.setInteger("pos", GadgetUtils.relPosToInt(start, tempPos));
+                            teTag.setString("type", analysis.getType());
+
+                            if (analysis.getNbtData() != null) {
+                                teTag.setTag("data", analysis.getNbtData());
+                            }
+
+                            teDataList.appendTag(teTag);
+
+                        }
                     }
                 }
             }
@@ -581,6 +606,11 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         int[] stateIntArray = stateIntArrayList.stream().mapToInt(i -> i).toArray();
         tagCompound.setIntArray("posIntArray", posIntArray);
         tagCompound.setIntArray("stateIntArray", stateIntArray);
+
+        // 保存TE数据
+        if (teDataList.tagCount() > 0) {
+            tagCompound.setTag("teData", teDataList);
+        }
 
         tagCompound.setTag("startPos", NBTUtil.createPosTag(start));
         tagCompound.setTag("endPos", NBTUtil.createPosTag(end));
@@ -596,8 +626,15 @@ public class GadgetCopyPaste extends GadgetGeneric implements ITemplate {
         PacketHandler.INSTANCE.sendTo(new PacketBlockMap(tagCompound), (EntityPlayerMP) player);
 
         // 发送操作结果消息
-        if (foundTE > 0) {
-            player.sendStatusMessage(new TextComponentString(TextFormatting.YELLOW + new TextComponentTranslation("message.gadget.TEinCopy").getUnformattedComponentText() + ": " + foundTE), true);
+        if (foundTE > 0 || supportedTE > 0) {
+            String message = TextFormatting.YELLOW + new TextComponentTranslation("message.gadget.TEinCopy").getUnformattedComponentText();
+            if (supportedTE > 0) {
+                message += " (" + supportedTE + " supported)";
+            }
+            if (foundTE > 0) {
+                message += ": " + foundTE + " unsupported";
+            }
+            player.sendStatusMessage(new TextComponentString(message), true);
         } else {
             player.sendStatusMessage(new TextComponentString(TextFormatting.AQUA + new TextComponentTranslation("message.gadget.copied").getUnformattedComponentText()), true);
         }
